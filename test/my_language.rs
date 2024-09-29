@@ -1,6 +1,8 @@
 use core::fmt;
+use cost::MathCostFunc;
 use egg::{rewrite as rw, *};
 use lexpr::*;
+mod cost;
 
 //define my own language
 define_language! {
@@ -57,7 +59,7 @@ fn main() {
     // let test_exp = "(*(/ 3 2) (/ 2 3))".parse().unwrap();
     let to_vecadd = "(Concat(Vec (+ (Get a 0) (Get b 0))
                                                   (+ (Get a 1) (Get b 1)))
-                                     (Vec (+ (Get a 2) (Get b 2))
+                                  (Vec (+ (Get a 2) (Get b 2))
                                                   (+ (Get a 3) (Get b 3))))";
     let to_vecmac="(Vec (+ a b) (+ c d))";
     
@@ -67,7 +69,7 @@ fn main() {
         .with_expr(&target_exp)
         .with_iter_limit(10)
         .run(rule);
-
+    let mut cost_fn = cost::MathCostFunc { egraph: &runner.egraph };
     // for (i, iteration) in runner.iterations.iter().enumerate() {
     //     println!("{}:\n{:?}", i, iteration.egraph_classes);
     // }
@@ -75,7 +77,7 @@ fn main() {
     //     "{}",
     //     &runner.explain_existance(&target_exp).get_flat_string()
     // );
-    let extract = Extractor::new(&runner.egraph, AstSize);
+    let extract = Extractor::new(&runner.egraph, cost_fn);
     let res = extract.find_best(runner.roots[0]);
     #[cfg(debug_assertions)]
     println!(

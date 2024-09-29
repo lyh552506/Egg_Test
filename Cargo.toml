@@ -16,4 +16,7 @@ panic = 'unwind'  # panic 处理方式，可以是 'unwind' 或 'abort'
 [dependencies]
 egg = "0.9.5"
 lexpr = "0.2.7"
-
+assert_approx_eq = "1.1.0"
+itertools = "0.9.0"
+clap = "2.33.2"
+libc = "0.2.98"
