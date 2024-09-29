@@ -3,6 +3,8 @@ use cost::MathCostFunc;
 use egg::{rewrite as rw, *};
 use lexpr::*;
 mod cost;
+mod costum_applier;
+mod costum_searcher;
 
 //define my own language
 define_language! {
@@ -53,7 +55,9 @@ fn main() {
         rw!("div-mul";"(* (/ ?z (/ ?x ?y)) (/ ?x ?y))"=>"?z"),
         // rw!("get-trans";"(Get ?a Num(i))"),
         rw!("vec-add";"(Vec (+ ?a ?b) (+ ?c ?d))"=>"(VecAdd (Vec ?a ?c) (Vec ?b ?d))"),
-        rw!("to-vecmac";"(VecAdd ?a (VecMul ?b ?c))"=>"(VecMac ?a ?b ?c)")
+        rw!("to-vecmac";"(VecAdd ?a (VecMul ?b ?c))"=>"(VecMac ?a ?b ?c)"),
+        // rw!("0-add-0"; "(Vec (Num 0))" => "(VecAdd (Num 0) (Num 0))"),
+        rw!("solve-AC-matching";{costum_searcher::VecSearcher}=>{costum_applier::VecApplier}),
     ];
 
     // let test_exp = "(*(/ 3 2) (/ 2 3))".parse().unwrap();
@@ -61,22 +65,35 @@ fn main() {
                                                   (+ (Get a 1) (Get b 1)))
                                   (Vec (+ (Get a 2) (Get b 2))
                                                   (+ (Get a 3) (Get b 3))))";
-    let to_vecmac="(Vec (+ a b) (+ c d))";
-    
-    let target_exp: RecExpr<Math> = to_vecmac.parse().unwrap();
+    let to_vecadd = "(Vec (+ a b) (+ c d))";
+    let to_vecmac = "(VecAdd a (VecMul b c))";
+    let costom_macth = "(Vec (+ a0 (* b0 c0))
+                              (+ a1 (* b1 c1))
+                              (+ a2 (* b2 c2))
+                              (+ (* b3 c3) a3))";
+    let target_exp: RecExpr<Math> = costom_macth.parse().unwrap();
     let mut runner = Runner::default()
         .with_explanations_enabled()
         .with_expr(&target_exp)
         .with_iter_limit(10)
         .run(rule);
-    let mut cost_fn = cost::MathCostFunc { egraph: &runner.egraph };
-    // for (i, iteration) in runner.iterations.iter().enumerate() {
-    //     println!("{}:\n{:?}", i, iteration.egraph_classes);
-    // }
-    // println!(
-    //     "{}",
-    //     &runner.explain_existance(&target_exp).get_flat_string()
-    // );
+    let mut cost_fn = cost::MathCostFunc {
+        egraph: &runner.egraph,
+    };
+    //print each iteration and cost
+    for (i, iteration) in runner.iterations.iter().enumerate() {
+        let extractor = Extractor::new(
+            &runner.egraph,
+            MathCostFunc {
+                egraph: &runner.egraph,
+            },
+        );
+        let (best_cost, best_expr) = extractor.find_best(runner.roots[0]);
+        println!(
+            "Iteration {}: Cost: {}, Expression: {}",
+            i, best_cost, best_expr
+        );
+    }
     let extract = Extractor::new(&runner.egraph, cost_fn);
     let res = extract.find_best(runner.roots[0]);
     #[cfg(debug_assertions)]
